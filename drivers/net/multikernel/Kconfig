@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# Multikernel network device configuration
+#
+
+config MULTIKERNEL_ETH
+	tristate "Virtual Ethernet between multikernel instances"
+	depends on MULTIKERNEL
+	help
+	  Presents a normal Ethernet device, mk0, in every kernel instance
+	  and carries frames between them over multikernel's shared-memory
+	  IPI ring. Unmodified AF_INET applications can then talk across the
+	  kernel boundary, which AF_VSOCK alone does not allow.
+
+	  The link is point-to-point: a spawn talks to instance 0, and the
+	  host to the instance named by the "peer" module parameter.
+	  Addresses are left to userspace; bring mk0 up with ip(8) as for
+	  any other interface.
+
+	  To compile this driver as a module, choose M here: the module will
+	  be called mk_eth. If unsure, say N.
