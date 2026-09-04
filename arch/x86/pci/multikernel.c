@@ -196,3 +196,28 @@ int __init pci_multikernel_init(void)
 	 */
 	return 0;
 }
+
+/*
+ * A spawn shares the PCI fabric with the kernel that handed it the function.
+ * The expansion ROM window it would be given has to come out of a bridge
+ * window that other kernel owns and programmed, so the assignment either
+ * fails to claim ("no compatible bridge window") or places the ROM over
+ * space this kernel does not control. A spawn never runs an option ROM, so
+ * drop the resource before anything tries to place it.
+ *
+ * Runs as a header fixup, i.e. after the BARs are sized in
+ * pci_setup_device() and before pci_assign_unassigned_resources().
+ */
+static void mk_pci_drop_rom(struct pci_dev *dev)
+{
+	struct resource *rom = &dev->resource[PCI_ROM_RESOURCE];
+
+	if (!mk_pci_isolated_functions() || !rom->flags)
+		return;
+
+	pci_info(dev, "multikernel: dropping expansion ROM resource\n");
+	rom->start = 0;
+	rom->end = 0;
+	rom->flags = 0;
+}
+DECLARE_PCI_FIXUP_HEADER(PCI_ANY_ID, PCI_ANY_ID, mk_pci_drop_rom);
