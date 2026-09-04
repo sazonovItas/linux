@@ -25,6 +25,13 @@
 #include <linux/pci.h>
 #include "internal.h"
 
+/*
+ * Parked on a PCI function while it belongs to an instance. No such driver
+ * exists, so the match always fails and nothing in this kernel binds the
+ * device; mk_do_device_add() clears it when the function comes back.
+ */
+#define MK_LENT_DRIVER_OVERRIDE "multikernel-lent"
+
 static const char mk_mem_resource_name[] = "System RAM (multikernel)";
 
 /* Resource operation tracking for rollback support */
@@ -780,6 +787,26 @@ static int mk_do_device_remove(u16 domain, u8 bus, u8 devfn)
 		pr_info("Multikernel hotplug: Unbinding device from %s\n", prev_driver);
 		device_release_driver(&pdev->dev);
 	}
+
+	/*
+	 * Unbinding alone does not give the function away: any driver that
+	 * matches can bind it again behind the instance's back. Park an
+	 * override on it so nothing here claims it while it is lent out.
+	 *
+	 * The pci_dev deliberately stays registered. Removing it outright
+	 * looks tidier, but these functions sit behind a hotplug-capable
+	 * root port that this kernel still owns, and taking the device out
+	 * of a pciehp slot powers the slot down - after which neither the
+	 * instance nor this kernel can reach the function at all. Leaving
+	 * the device in place, driverless and overridden, is what a VFIO
+	 * handoff does and what the device-add "driver" property in
+	 * Documentation/multikernel/overlays.rst describes.
+	 */
+	if (driver_set_override(&pdev->dev, &pdev->driver_override,
+				MK_LENT_DRIVER_OVERRIDE,
+				strlen(MK_LENT_DRIVER_OVERRIDE)))
+		pr_warn("Multikernel hotplug: could not fence %04x:%02x:%02x.%x from host drivers\n",
+			domain, bus, PCI_SLOT(devfn), PCI_FUNC(devfn));
 
 	pci_dev_put(pdev);
 
