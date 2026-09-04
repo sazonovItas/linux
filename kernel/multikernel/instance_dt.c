@@ -519,6 +519,24 @@ bool mk_pci_should_probe(struct pci_bus *bus, int devfn)
 }
 EXPORT_SYMBOL_GPL(mk_pci_should_probe);
 
+/**
+ * mk_pci_isolated_functions - Whether individual PCI functions are owned separately
+ *
+ * A spawn kernel is given single PCI functions: the instance device tree may
+ * describe 00:01.5 while function 0 of that slot stays with the host. The
+ * usual scan rule - no function 0, no device - would then hide every device
+ * the instance was given, so a spawn must probe all eight functions and let
+ * mk_pci_should_probe() decide each one. This is the same property
+ * hypervisor_isolated_pci_functions() reports for Jailhouse and s390.
+ *
+ * Returns: true on a spawn kernel, false on a host
+ */
+bool mk_pci_isolated_functions(void)
+{
+	return mk_manifest_phys() != 0;
+}
+EXPORT_SYMBOL_GPL(mk_pci_isolated_functions);
+
 /*
  * A netdev's alias is its interface name, the one the device had in the
  * kernel that gave it away, found from the node its device is bound to,

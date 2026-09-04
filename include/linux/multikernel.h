@@ -880,6 +880,7 @@ void mk_kimage_free(struct kimage *image, void *virt_addr, size_t size);
 
 /* Device probe filtering against the instance's allowlist */
 bool mk_pci_should_probe(struct pci_bus *bus, int devfn);
+bool mk_pci_isolated_functions(void);
 bool mk_platform_device_allowed(const char *name, const char *hid);
 
 /* Early CPU registration from the manifest (spawn kernels) */
@@ -926,6 +927,10 @@ static inline void mk_kimage_free(struct kimage *image, void *virt_addr,
 static inline bool mk_pci_should_probe(struct pci_bus *bus, int devfn)
 {
 	return true;
+}
+static inline bool mk_pci_isolated_functions(void)
+{
+	return false;
 }
 static inline bool mk_platform_device_allowed(const char *name, const char *hid)
 {

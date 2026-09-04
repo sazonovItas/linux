@@ -2892,9 +2892,11 @@ int pci_scan_slot(struct pci_bus *bus, int devfn)
 			/*
 			 * Function 0 is required unless we are running on
 			 * a hypervisor that passes through individual PCI
-			 * functions.
+			 * functions, or are a multikernel spawn, which is
+			 * given single functions of a shared slot.
 			 */
-			if (!hypervisor_isolated_pci_functions())
+			if (!hypervisor_isolated_pci_functions() &&
+			    !mk_pci_isolated_functions())
 				break;
 		}
 		fn = next_fn(bus, dev, fn);
